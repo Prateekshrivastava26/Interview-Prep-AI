@@ -1,6 +1,8 @@
 import { useEffect, useState, useRef } from 'react';
 import { useQuiz } from '../store/quiz-context.jsx';
 
+// Dynamic import used inside useEffect to avoid crash
+
 function ResultsScreen() {
     const { state, dispatch } = useQuiz();
     const { result } = state;
@@ -9,38 +11,48 @@ function ResultsScreen() {
     const scoreSavedRef = useRef(false);
 
     useEffect(() => {
-        if (result && !scoreSavedRef.current) {
-            const saveAndFetch = async () => {
-                try {
-                    const userStr = localStorage.getItem('user');
-                    const user = userStr ? JSON.parse(userStr) : { username: 'Guest' };
+        let isMounted = true;
+        const manageLeaderboard = async () => {
+            if (!result) return;
 
-                    const { saveScore, getLeaderboard } = await import('../services/leaderboard.js');
+            try {
+                // Dynamic import to prevent crash if module is missing or invalid
+                const { saveScore, getLeaderboard } = await import('../services/leaderboard.js');
 
-                    // Save current score
-                    saveScore({
-                        username: user.username,
-                        topic: state.topic,
-                        score: result.score,
-                        total: result.total,
-                        percentage: result.percentage
-                    });
+                if (!scoreSavedRef.current) {
+                    try {
+                        let user = { username: 'Guest' };
+                        try {
+                            const userStr = localStorage.getItem('user');
+                            if (userStr) user = JSON.parse(userStr);
+                        } catch (e) {
+                            console.error('Error parsing user data:', e);
+                        }
 
-                    scoreSavedRef.current = true;
-
-                    // Fetch updated leaderboard
-                    setLeaderboard(getLeaderboard(10));
-                } catch (error) {
-                    console.error('Error managing leaderboard:', error);
+                        saveScore({
+                            username: user.username,
+                            topic: state.topic,
+                            score: result.score,
+                            total: result.total,
+                            percentage: result.percentage
+                        });
+                        scoreSavedRef.current = true;
+                    } catch (e) {
+                        console.error('Error saving score:', e);
+                    }
                 }
-            };
-            saveAndFetch();
-        } else if (result) {
-            // If already saved, just fetch
-            import('../services/leaderboard.js').then(module => {
-                setLeaderboard(module.getLeaderboard(10));
-            });
-        }
+
+                if (isMounted) {
+                    setLeaderboard(getLeaderboard(10));
+                }
+            } catch (error) {
+                console.error('Failed to load leaderboard module:', error);
+            }
+        };
+
+        manageLeaderboard();
+
+        return () => { isMounted = false; };
     }, [result, state.topic]);
 
     if (!result) return <div>Calculating results...</div>;
@@ -86,10 +98,10 @@ function ResultsScreen() {
             </div>
 
             {/* Leaderboard Section */}
-            {leaderboard.length > 0 && (
-                <div style={{ marginBottom: '3rem', textAlign: 'left', maxWidth: '600px', margin: '0 auto 3rem auto' }}>
-                    <h3 style={{ fontSize: '1.5rem', marginBottom: '1rem', textAlign: 'center' }}>🏆 Top 10 Leaderboard</h3>
-                    <div style={{ background: 'rgba(255,255,255,0.05)', borderRadius: 'var(--radius-md)', overflow: 'hidden' }}>
+            <div style={{ marginBottom: '3rem', textAlign: 'left', maxWidth: '600px', margin: '0 auto 3rem auto' }}>
+                <h3 style={{ fontSize: '1.5rem', marginBottom: '1rem', textAlign: 'center' }}>🏆 Top 10 Leaderboard</h3>
+                <div style={{ background: 'rgba(255,255,255,0.05)', borderRadius: 'var(--radius-md)', overflow: 'hidden' }}>
+                    {leaderboard.length > 0 ? (
                         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                             <thead>
                                 <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.05)' }}>
@@ -117,9 +129,13 @@ function ResultsScreen() {
                                 ))}
                             </tbody>
                         </table>
-                    </div>
+                    ) : (
+                        <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--color-text-muted)' }}>
+                            No scores recorded yet. Be the first!
+                        </div>
+                    )}
                 </div>
-            )}
+            </div>
 
             <button
                 className="btn-primary"
