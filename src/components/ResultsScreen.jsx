@@ -1,8 +1,47 @@
+import { useEffect, useState, useRef } from 'react';
 import { useQuiz } from '../store/quiz-context.jsx';
 
 function ResultsScreen() {
     const { state, dispatch } = useQuiz();
     const { result } = state;
+    // State for leaderboard
+    const [leaderboard, setLeaderboard] = useState([]);
+    const scoreSavedRef = useRef(false);
+
+    useEffect(() => {
+        if (result && !scoreSavedRef.current) {
+            const saveAndFetch = async () => {
+                try {
+                    const userStr = localStorage.getItem('user');
+                    const user = userStr ? JSON.parse(userStr) : { username: 'Guest' };
+
+                    const { saveScore, getLeaderboard } = await import('../services/leaderboard.js');
+
+                    // Save current score
+                    saveScore({
+                        username: user.username,
+                        topic: state.topic,
+                        score: result.score,
+                        total: result.total,
+                        percentage: result.percentage
+                    });
+
+                    scoreSavedRef.current = true;
+
+                    // Fetch updated leaderboard
+                    setLeaderboard(getLeaderboard(10));
+                } catch (error) {
+                    console.error('Error managing leaderboard:', error);
+                }
+            };
+            saveAndFetch();
+        } else if (result) {
+            // If already saved, just fetch
+            import('../services/leaderboard.js').then(module => {
+                setLeaderboard(module.getLeaderboard(10));
+            });
+        }
+    }, [result, state.topic]);
 
     if (!result) return <div>Calculating results...</div>;
 
@@ -15,6 +54,7 @@ function ResultsScreen() {
     return (
         <div className="glass-panel" style={{ padding: '3rem', maxWidth: '800px', width: '100%', margin: '0 auto', textAlign: 'center' }}>
             <h2 style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>Interview Complete!</h2>
+
             <p style={{ fontSize: '1.2rem', color: 'var(--color-text-muted)', marginBottom: '3rem' }}>Here is your performance summary for <strong>{state.topic}</strong></p>
 
             {/* Score Circle */}
@@ -44,6 +84,42 @@ function ResultsScreen() {
             <div style={{ marginBottom: '3rem', fontSize: '1.2rem', lineHeight: '1.6' }}>
                 {result.summary}
             </div>
+
+            {/* Leaderboard Section */}
+            {leaderboard.length > 0 && (
+                <div style={{ marginBottom: '3rem', textAlign: 'left', maxWidth: '600px', margin: '0 auto 3rem auto' }}>
+                    <h3 style={{ fontSize: '1.5rem', marginBottom: '1rem', textAlign: 'center' }}>🏆 Top 10 Leaderboard</h3>
+                    <div style={{ background: 'rgba(255,255,255,0.05)', borderRadius: 'var(--radius-md)', overflow: 'hidden' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                            <thead>
+                                <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.05)' }}>
+                                    <th style={{ padding: '0.75rem', textAlign: 'center', width: '50px' }}>Rank</th>
+                                    <th style={{ padding: '0.75rem', textAlign: 'left' }}>User</th>
+                                    <th style={{ padding: '0.75rem', textAlign: 'left' }}>Topic</th>
+                                    <th style={{ padding: '0.75rem', textAlign: 'right' }}>Score</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {leaderboard.map((entry, index) => (
+                                    <tr key={index} style={{
+                                        borderBottom: '1px solid rgba(255,255,255,0.05)',
+                                        background: index === 0 ? 'rgba(255, 215, 0, 0.1)' :
+                                            index === 1 ? 'rgba(192, 192, 192, 0.1)' :
+                                                index === 2 ? 'rgba(205, 127, 50, 0.1)' : 'transparent'
+                                    }}>
+                                        <td style={{ padding: '0.75rem', textAlign: 'center', fontWeight: 'bold', color: index < 3 ? 'var(--color-primary)' : 'inherit' }}>
+                                            {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${index + 1}`}
+                                        </td>
+                                        <td style={{ padding: '0.75rem' }}>{entry.username}</td>
+                                        <td style={{ padding: '0.75rem', fontSize: '0.9rem', color: 'var(--color-text-muted)' }}>{entry.topic}</td>
+                                        <td style={{ padding: '0.75rem', textAlign: 'right', fontWeight: 'bold' }}>{entry.score}/{entry.total}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
 
             <button
                 className="btn-primary"

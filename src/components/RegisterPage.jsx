@@ -76,6 +76,7 @@ function RegisterPage() {
 
             <div className="auth-card glass-panel">
                 <div className="auth-header">
+                    <img src="/logo.jpg" alt="App Logo" style={{ width: '48px', height: '48px', marginBottom: '1rem' }} />
                     <h1 className="text-gradient">Create Account</h1>
                     <p className="auth-subtitle">Start your interview preparation journey today</p>
                 </div>

@@ -2,7 +2,7 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 // Embedded API Key for automatic question generation
-const GEMINI_API_KEY = "AIzaSyBs2wIh-a5wQY3p8iSOQzSDl1PcJmE2Xr4";
+const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 
 export const generateQuizContent = async (apiKey, topic, difficulty, company, count = 10) => {
   // Use embedded key if no key provided

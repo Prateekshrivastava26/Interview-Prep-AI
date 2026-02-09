@@ -41,6 +41,7 @@ function LoginPage() {
 
             <div className="auth-card glass-panel">
                 <div className="auth-header">
+                    <img src="/logo.jpg" alt="App Logo" style={{ width: '48px', height: '48px', marginBottom: '1rem' }} />
                     <h1 className="text-gradient">Welcome Back</h1>
                     <p className="auth-subtitle">Sign in to continue your interview prep journey</p>
                 </div>
