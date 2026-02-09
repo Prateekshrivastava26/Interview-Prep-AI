@@ -11,7 +11,7 @@ function App() {
   return (
     <div className="container">
       <header style={{ padding: '2rem 0', textAlign: 'center', position: 'relative' }}>
-        <img src="/logo.jpg" alt="Logo" style={{ width: '64px', height: '64px', marginBottom: '1rem' }} />
+        <img src="/Interview-Prep-AI/logo.jpg" alt="Logo" style={{ width: '64px', height: '64px', marginBottom: '1rem' }} />
         {authState.isAuthenticated && (
           <div style={{
             position: 'absolute',
